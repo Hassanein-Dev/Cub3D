@@ -1,0 +1,92 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   input_mouse.c                                      :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: hsharaf- <hsharaf-@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/09/10 16:45:47 by hsharaf-          #+#    #+#             */
+/*   Updated: 2025/09/17 16:08:27 by hsharaf-         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "cub3d.h"
+#include "mlx.h"
+
+static int	iabs_local(int v)
+{
+	if (v < 0)
+		return (-v);
+	return (v);
+}
+
+static void	reset_mouse_to_center(t_game *g)
+{
+	if (g->mlx && g->win)
+		mlx_mouse_move(g->mlx, g->win, WIN_W / 2, WIN_H / 2);
+	g->mouse.last_x = WIN_W / 2;
+	g->mouse.last_y = WIN_H / 2;
+	g->mouse.x = WIN_W / 2;
+	g->mouse.y = WIN_H / 2;
+	g->mouse.captured = 1;
+}
+
+static void	capture_mouse_position(t_game *g, int x, int y)
+{
+	g->mouse.x = x;
+	g->mouse.y = y;
+	g->mouse.last_x = x;
+	g->mouse.last_y = y;
+	g->mouse.captured = 1;
+}
+
+static void	process_mouse_rotation(t_game *g, int dx)
+{
+	double	rot;
+	double	time_adjusted_rot;
+	double	old_dir_x;
+	double	old_plane_x;
+
+	rot = (double)dx * 0.002;
+	if (iabs_local(dx) > 1)
+	{
+		time_adjusted_rot = rot * g->frame_time * 60.0;
+		old_dir_x = g->dir_x;
+		g->dir_x = g->dir_x * cos(time_adjusted_rot)
+			- g->dir_y * sin(time_adjusted_rot);
+		g->dir_y = old_dir_x * sin(time_adjusted_rot)
+			+ g->dir_y * cos(time_adjusted_rot);
+		old_plane_x = g->plane_x;
+		g->plane_x = g->plane_x * cos(time_adjusted_rot)
+			- g->plane_y * sin(time_adjusted_rot);
+		g->plane_y = old_plane_x * sin(time_adjusted_rot)
+			+ g->plane_y * cos(time_adjusted_rot);
+	}
+}
+
+int	on_mouse_move(int x, int y, void *param)
+{
+	t_game	*g;
+	int		dx;
+
+	g = (t_game *)param;
+	if (!g || g->closing || !g->mlx || !g->win)
+		return (0);
+	if (x < 50 || x > WIN_W - 50 || y < 50 || y > WIN_H - 50)
+	{
+		reset_mouse_to_center(g);
+		return (0);
+	}
+	if (!g->mouse.captured)
+	{
+		capture_mouse_position(g, x, y);
+		return (0);
+	}
+	dx = x - g->mouse.last_x;
+	process_mouse_rotation(g, dx);
+	g->mouse.last_x = x;
+	g->mouse.last_y = y;
+	g->mouse.x = x;
+	g->mouse.y = y;
+	return (0);
+}
